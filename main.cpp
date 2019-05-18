@@ -43,14 +43,6 @@ template <typename Token, typename TokensIterator, typename Tree,
 	typename OperationBranchesType = vector<operation_branch<operation_or_token<Token> > > >
 	class knuth_machine {
 	public:
-		struct parameter {
-			option_to_do a_t;
-			option_to_do a_f;
-			TokensIterator h;
-		};
-	private:
-		typedef function<Tree(parameter)> operation_type;
-	public:
 		//typedef vector<operation_type> operations_type;
 		typedef vector<OperationBranchesType> table_type;
 		knuth_machine(table_type table, TokensIterator begin, TokensIterator end)
@@ -178,12 +170,10 @@ ostream& operator<<(ostream& stream, const node<V>& instance) {
 
 typedef node<string> tree;
 typedef knuth_machine<token, vector<token>::iterator, tree> analyzer;
-typedef typename analyzer::parameter parameter;
 
 int main() {
 	string in = "a=(b+a)";
 	vector<token> tokens(in.begin(), in.end());
-	//analyzer::operations_type operations = { s, b, r, e };
 	analyzer::table_type table =
 	{
 		{
