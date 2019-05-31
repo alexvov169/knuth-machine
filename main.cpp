@@ -30,24 +30,24 @@ ostream& operator<<(ostream& outstream, option_to_do instance) {
 
 template <typename Token>
 struct operation_or_token {
-	union {
-		Token token;
-		size_t operation_key;
-	};
-	bool is_token;
-	operation_or_token(Token t) : token(t), is_token(true) {}
-	operation_or_token(int o_k) //L.i.A.
+    union {
+        Token token;
+        size_t operation_key;
+    };
+    bool is_token;
+    operation_or_token(Token t) : token(t), is_token(true) {}
+    operation_or_token(int o_k) //L.i.A.
         : operation_key(size_t(o_k)), is_token(false) {}
 };
 
 template <typename OperationOrToken>
 struct operation_branch {
-	OperationOrToken operation_or_token; option_to_do when_true; option_to_do when_false;
+    OperationOrToken operation_or_token; option_to_do when_true; option_to_do when_false;
 };
 
 
 enum operation_key {
-	S, B, R, E, END
+    S, B, R, E, END
 };
 
 template <typename Token, typename TokensIterator, typename Tree,
@@ -133,12 +133,12 @@ typedef char token; // of course NOT char
 
 template <typename Value>
 struct node {
-	Value value;
-	vector<node*> branches;
-	node(size_t operation_key) : value(to_value(operation_key)) {}
-	void add_branch(node* branch) {
-		branches.push_back(branch);
-	}
+    Value value;
+    vector<node*> branches;
+    node(size_t operation_key) : value(to_value(operation_key)) {}
+    void add_branch(node* branch) {
+        branches.push_back(branch);
+    }
     void clear() {
         for (auto branch : branches) {
             branch->clear();
@@ -149,66 +149,66 @@ private:
     static Value to_value(size_t operation_key) {
         return to_string(operation_key);
     }
-	template <typename V>
-	friend ostream& operator<<(ostream&, const node<V>&);
+    template <typename V>
+    friend ostream& operator<<(ostream&, const node<V>&);
 };
 
 template <typename V>
 void print_node(ostream& stream, const node<V>& instance, int level = 0) {
-	for (int i = 0; i < 2 * level; ++i) {
-		stream << '.';
-	}
-	stream << instance.value << endl;
-	for (const auto& branch : instance.branches) {
-		print_node(stream, *branch, 1 + level);
-	}
+    for (int i = 0; i < 2 * level; ++i) {
+        stream << '.';
+    }
+    stream << instance.value << endl;
+    for (const auto& branch : instance.branches) {
+        print_node(stream, *branch, 1 + level);
+    }
 }
 
 template <typename V>
 ostream& operator<<(ostream& stream, const node<V>& instance) {
-	print_node(stream, instance);
-	return stream;
+    print_node(stream, instance);
+    return stream;
 }
 
 typedef node<string> tree;
 typedef knuth_machine<token, vector<token>::iterator, tree> analyzer;
 
 int main() {
-	string in = "a=(b+a)";
-	vector<token> tokens(in.begin(), in.end());
-	analyzer::table_type table =
-	{
-		{
-			{ B , N, ERROR},
-			{END, OK, ERROR}
-		},
-		{
-			{ R , T, N},
-			{'(', N, F},
-			{ B , N, F},
-			{')', T, F},
-		},
-		{
-			{ E , N, F},
-			{'=', N, F},
-			{ E , T, F}
-		},
-		{
-			{'a', T, N},
-			{'b', T, N},
-			{'(', N, F},
-			{ E , N, F},
-			{'+', N, F},
-			{ E , N, F},
-			{')', T, F}
-		}
-	};
-	analyzer knuth_analyzer(table, tokens.begin(), tokens.end());
+    string in = "a=(b+a)";
+    vector<token> tokens(in.begin(), in.end());
+    analyzer::table_type table =
+    {
+        {
+            { B , N, ERROR},
+            {END, OK, ERROR}
+        },
+        {
+            { R , T, N},
+            {'(', N, F},
+            { B , N, F},
+            {')', T, F},
+        },
+        {
+            { E , N, F},
+            {'=', N, F},
+            { E , T, F}
+        },
+        {
+            {'a', T, N},
+            {'b', T, N},
+            {'(', N, F},
+            { E , N, F},
+            {'+', N, F},
+            { E , N, F},
+            {')', T, F}
+        }
+    };
+    analyzer knuth_analyzer(table, tokens.begin(), tokens.end());
     cleaner<analyzer::returned> result(knuth_analyzer.start());
     cout << result.flag << endl;
-	cout << *result.tree << endl;
+    cout << *result.tree << endl;
     cout << hex << static_cast<size_t>(-1) << endl;
-	return 0;
+    return 0;
 }
 /**
  * WON'T WORK FOR GRAMMAR WITH RULE(S):
