@@ -11,11 +11,22 @@
 #include <vector>
 #include <string>
 
+#include "perv.h"
+
 using namespace std;
 
 enum option_to_do {
-	N, T, F, ERROR, OK
+    N = 0, // continue matching
+    T, // stop matching with code TRUE
+    F, // stop matching with code FALSE
+    OK,
+    ERROR = static_cast<size_t>(-1), // stop matching with code ERROR
 };
+
+ostream& operator<<(ostream& outstream, option_to_do instance) {
+    static string representation[] = { "NEXT", "TRUE", "FALSE", "OK", "ERROR" };
+    return outstream << representation[instance];
+}
 
 template <typename Token>
 struct operation_or_token {
@@ -26,7 +37,7 @@ struct operation_or_token {
 	bool is_token;
 	operation_or_token(Token t) : token(t), is_token(true) {}
 	operation_or_token(int o_k) //L.i.A.
-		: operation_key(o_k), is_token(false) {}
+        : operation_key(size_t(o_k)), is_token(false) {}
 };
 
 template <typename OperationOrToken>
@@ -40,98 +51,82 @@ enum operation_key {
 };
 
 template <typename Token, typename TokensIterator, typename Tree,
-	typename OperationBranchesType = vector<operation_branch<operation_or_token<Token> > > >
-	class knuth_machine {
-	public:
-		//typedef vector<operation_type> operations_type;
-		typedef vector<OperationBranchesType> table_type;
-		knuth_machine(table_type table, TokensIterator begin, TokensIterator end)
-			: table(table), begin(begin), end(end) {}
+    typename OperationBranchesType = vector<operation_branch<operation_or_token<Token> > > >
+class knuth_machine {
+public:
+    //typedef vector<operation_type> operations_type;
+    typedef vector<OperationBranchesType> table_type;
+    knuth_machine(table_type table, TokensIterator begin, TokensIterator end)
+        : table(table), begin(begin), end(end) {}
 
-		struct returned {
-			option_to_do flag;
-			Tree* tree;
-			TokensIterator h;
-		};
+    struct returned {
+        option_to_do flag; Tree* tree; TokensIterator h;
+        void clear() {
+            tree->clear();
+            delete tree;
+        }
+    };
 
-		returned start(size_t entry = 0) {
-			return handle(entry, begin);
-		}
+    returned start(size_t entry = 0) {
+        return handle(entry, begin);
+    }
 
-		returned handle(size_t operation_key, TokensIterator h) {
-			OperationBranchesType row = table[operation_key];
-			Tree* result_tree = new Tree(operation_key);
-			option_to_do current_state = N;
-			TokensIterator current_h = h;
-			for (const auto& operation_branch : row) {
-				if (operation_branch.operation_or_token.is_token) {
-					if (current_h == end) {
-						current_state = F;
-					}
-					else {
-						if (*current_h == operation_branch.operation_or_token.token) {
-							++current_h;
-							current_state = operation_branch.when_true;
-						}
-						else {
-							current_state = operation_branch.when_false;
-						}
-					}
-				}
-				else {
-					if (operation_branch.operation_or_token.operation_key == END) {
-						if (current_h == end) {
-							current_state = operation_branch.when_true;
-						}
-						else {
-							current_state = operation_branch.when_false;
-						}
-					}
-					else {
-						auto inner = handle(operation_branch.operation_or_token.operation_key, current_h);
-						switch (inner.flag) {
-						case T:
-							current_state = operation_branch.when_true;
-							result_tree->add_branch(inner.tree);
-							current_h = inner.h;
-							break;
-						case F:
-							current_state = operation_branch.when_false;
-							break;
-						default:
-							current_state = ERROR;
-						}
-					}
-				}
-				switch (current_state) {
-				case N: break;
-				case T:
-					return {
-						T, result_tree, current_h
-					};
-				case F:
-					return {
-						F, nullptr, h
-					};
-				case ERROR:
-					return {
-						ERROR, nullptr, h
-					};
-				case OK:
-					return {
-						OK, result_tree, current_h
-					};
-				}
-			}
-			return {
-				ERROR, result_tree, current_h
-			};
-		}
+    returned handle(size_t operation_key, TokensIterator h) {
+        OperationBranchesType row = table[operation_key];
+        Tree* result_tree = new Tree(operation_key);
+        option_to_do current_state = N;
+        TokensIterator current_h = h;
+        for (const auto& operation_branch : row) {
+            if (operation_branch.operation_or_token.is_token) {
+                if (current_h == end) {
+                    current_state = F;
+                } else {
+                    if (*current_h == operation_branch.operation_or_token.token) {
+                        ++current_h;
+                        current_state = operation_branch.when_true;
+                    } else {
+                        current_state = operation_branch.when_false;
+                    }
+                }
+            } else {
+                if (operation_branch.operation_or_token.operation_key == END) {
+                    if (current_h == end) {
+                        current_state = operation_branch.when_true;
+                    }
+                    else {
+                        current_state = operation_branch.when_false;
+                    }
+                } else {
+                    auto inner = handle(operation_branch.operation_or_token.operation_key, current_h);
+                    switch (inner.flag) {
+                    case T:
+                        current_state = operation_branch.when_true;
+                        result_tree->add_branch(inner.tree);
+                        current_h = inner.h;
+                        break;
+                    case F:
+                        current_state = operation_branch.when_false;
+                        break;
+                    default:
+                        current_state = ERROR;
+                    }
+                }
+            }
+            switch (current_state) {
+            case N: break;
+            case T: return { T, result_tree, current_h };
+            case F: return { F, nullptr, h };
+            case ERROR: return { ERROR, nullptr, h };
+            case OK: return { OK, result_tree, current_h };
+            }
+        }
+        return { ERROR, result_tree, current_h };
+    }
 
-	private:
-		table_type table;
-		TokensIterator begin;
-		TokensIterator end;
+private:
+    table_type table;
+    TokensIterator begin;
+    TokensIterator end;
 };
 
 typedef char token; // of course NOT char
@@ -140,13 +135,20 @@ template <typename Value>
 struct node {
 	Value value;
 	vector<node*> branches;
-	Value to_value(size_t operation_key) {
-		return to_string(operation_key);
-	}
 	node(size_t operation_key) : value(to_value(operation_key)) {}
 	void add_branch(node* branch) {
 		branches.push_back(branch);
 	}
+    void clear() {
+        for (auto branch : branches) {
+            branch->clear();
+            delete branch;
+        }
+    }
+private:
+    static Value to_value(size_t operation_key) {
+        return to_string(operation_key);
+    }
 	template <typename V>
 	friend ostream& operator<<(ostream&, const node<V>&);
 };
@@ -202,9 +204,10 @@ int main() {
 		}
 	};
 	analyzer knuth_analyzer(table, tokens.begin(), tokens.end());
-	auto result = knuth_analyzer.start();
+    cleaner<analyzer::returned> result(knuth_analyzer.start());
+    cout << result.flag << endl;
 	cout << *result.tree << endl;
-	cout << "Hello World!" << endl;
+    cout << hex << static_cast<size_t>(-1) << endl;
 	return 0;
 }
 /**
